@@ -1,0 +1,167 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(survival)
+```
+
+```{r}
+temp <- data$serology %>% left_join(data$demographics) %>%
+        mutate(ageG = cut(age,breaks=seq(-1,100,25)),
+               dateG = cut(date,breaks=seq(0,365*2,50)))
+
+
+temp %>% filter(!is.na(dateG) & !is.na(ageG)) %>% 
+        #group_by(ageG) %>% mutate(nG=n()) %>% 
+        group_by(dateG,ageG) %>% 
+        summarize(igg = mean(igg)) %>% ungroup %>%
+        ggplot(aes(x=dateG,y=igg,fill=ageG)) +
+        geom_bar(stat='identity',position="dodge")
+        #stat_summary(fun=mean, geom="step")#, position = "stack")
+
+
+```
+
+
+```{r}
+temp <- temp %>% left_join(data$gp) %>% group_by(id) %>% 
+         mutate(nrisks = sum(!is.na(condition))) %>%
+         filter(row_number()==1) %>% ungroup
+temp
+```
+
+```{r}
+temp <- data$infections
+temp <- temp %>% left_join(data$demographics)
+temp <- temp %>% left_join(data$vaccine %>% rename(vdate=date)) %>%
+    group_by(id,date) %>% mutate(ndose=row_number(),days_since = date-vdate) %>%
+    arrange(id,date,days_since) %>%
+    mutate(ndose=ifelse(days_since<0 | is.na(ndose),0,ndose)) %>%
+    filter(all(days_since<0) | days_since>0) %>%
+    ungroup %>% group_by(id,date) %>%
+    filter(row_number()==1) %>%
+    ungroup %>%
+    mutate(ndose=as.factor(ndose))
+
+temp <- temp %>% left_join(data$hosp %>% rename(hdate=date)) %>%
+          mutate(days=hdate-date) %>% filter((days>0 & days<28) | is.na(days)) %>%
+          mutate(outcome=ifelse(is.na(days),0,1))
+
+temp <- temp %>% left_join(data$gp) %>% group_by(id) %>%
+    #mutate(nrisks = relevel(as.factor(as.character(sum(!is.na(condition)))),ref='0')) %>%
+    mutate(nrisks = factor(sum(!is.na(condition)),levels=c(0,1,2,3,4,5,100))) %>%
+    filter(row_number()==1) %>% ungroup
+
+
+temp %>% ggplot(aes(x=date,fill=as.factor(nrisks))) + 
+         geom_histogram(position = 'dodge',bins=10) +
+         scale_y_log10() +
+         facet_wrap(. ~ outcome)
+```
+
+
+
+
+
+```{r}
+temp <- data$serology %>% left_join(data$demographics)
+  temp <- temp %>% left_join(data$vaccine %>% rename(vdate=date)) %>%
+    group_by(id,date) %>% mutate(ndose=row_number(),days_since = date-vdate) %>%
+    arrange(id,date,days_since) %>% 
+    mutate(ndose=ifelse(days_since<0 | is.na(ndose),0,ndose)) %>%
+    #mutate(ndose=ifelse(is.na(ndose),0,ndose)) %>%
+    filter(ifelse(n()>1,days_since>0,T)) %>%
+    ungroup %>% group_by(id,date) %>%
+    filter(row_number()==1) %>% 
+    ungroup %>%
+    mutate(ndose=as.factor(ndose))
+temp %>% select(id,date,vdate,ndose,days_since)
+```
+
+
+t
+```{r}
+
+```
+
+
+
+```{r}
+temp %>% filter(!is.na(dateG) & !is.na(ageG)) %>% 
+        group_by(dateG,ageG) %>% 
+        summarize(igg = sum(igg)) %>% 
+        group_by(ageG) %>% 
+        mutate(igg = igg / sum(igg)) %>%
+        ggplot(aes(x=dateG,y=igg,fill=ageG)) +
+        geom_bar(stat='identity',position="dodge")
+        #stat_summary(fun=mean, geom="step")#, position = "stack")
+```
+
+```{r}
+temp %>% filter(!is.na(dateG) & !is.na(ageG)) %>% mutate(nrisks=as.factor(nrisks)) %>% 
+        group_by(dateG,nrisks) %>% 
+        summarize(igg = sum(igg)) %>% 
+        group_by(nrisks) %>% 
+        mutate(igg = igg / sum(igg)) %>%
+        ggplot(aes(x=dateG,y=igg,fill=nrisks)) +
+        geom_bar(stat='identity',position="dodge")
+```
+
+```{r}
+system.time(generate_dataframe(100000))
+```
+
+```{r}
+df_hosp <- read.csv("data/hosp.csv") %>% as_tibble
+df_demo <- read.csv("data/demo.csv") %>% as_tibble
+df_vaccine <- read.csv("data/vaccine.csv") %>% as_tibble %>% rename(vdate=date)
+```
+
+
+```{r}
+df_ana <- df_demo %>% left_join(df_hosp,by='id') %>% group_by(id) %>% filter(n()==1) %>%
+            left_join(df_vaccine %>% group_by(id) %>% mutate(ndose=row_number())) %>%   
+            mutate(days_since = date - vdate) %>% 
+            mutate(days_since = ifelse(days_since<5,NA,days_since)) %>%
+            #filter(!is.na(days_since)) %>%
+            group_by(id,date) %>%
+            mutate(outcome = ifelse(!is.na(days_since) & row_number()==n(),1L,0L)) %>%
+            ungroup %>% 
+            select(outcome,ndose,age,bmi)
+#%>% 
+#            filter(date>vdate) %>% group_by(id,date) %>% filter(row_number()==n())
+            #%>%
+            #mutate(date = ifelse(is.na(date),1000,date),
+            #       ndose = ifelse(is.na(ndose),0,ndose)
+            #       ) %>%
+            #mutate(days_since = date - vdate) %>% filter(date>vdate) %>%
+            #group_by(id,date) #%>% filter(row_number()==n())
+df_ana
+```
+```{r}
+df_ana2 <- df_ana %>% mutate(ndose = as.factor(ndose),
+                  age = as.factor(cut(age, breaks = c(0,20,40,60,80,1000))),
+                  bmi = as.factor(cut(bmi, breaks = c(0,20,25,30,1000))))
+```
+
+```{r}
+fit <- glm(outcome ~ ndose + age + bmi, family=binomial,data=df_ana2)
+summary(fit)
+```
+
+```{r}
+exp(coef(fit))
+```
+
+
+
+
+
+```{r}
+df_hosp %>% ggplot(aes(x=date)) + 
+                         geom_histogram(bins=100) +
+                         scale_y_log10()
+               
+```
