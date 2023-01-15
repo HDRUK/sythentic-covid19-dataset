@@ -9,6 +9,7 @@ private:
   std::map<std::string,Variant*> variants;
 public:
   Pandemic();
+  void set_variants(std::map<std::string, Variant*> variants);
   std::map<std::string,Variant*> get_variants();
   std::vector<double> run(std::vector<double>);
   double get_p_infection(int day);

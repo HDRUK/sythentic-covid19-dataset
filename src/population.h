@@ -46,6 +46,7 @@ protected:
   std::map<std::string,Comorbidity*> comorbidities;
 public:
   Pandemic* pandemic;
+  void set_pandemic(Pandemic* p ){ this->pandemic = p;};
   explicit Population();
   int get_age();
   int get_imd();

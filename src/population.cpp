@@ -8,7 +8,7 @@ Population::Population(){
   this->gen = std::mt19937_64(rd());
 
   //create a pandemic
-  this->pandemic = new Pandemic();
+  //this->pandemic = new Pandemic();
 
   this->comorbidities["diabetes"] = new Comorbidity(
     [](Person* p){
@@ -240,20 +240,16 @@ Person* Population::generate(){
   if(nrisks>0){
     p_vaccine *= pow(nrisks/5.,-0.3);
   }
-  //std::cout << p_vaccine << std::endl;
-  int days = int(100*p_vaccine);
+
+  int days = int(0);//*p_vaccine);
   //days = 100;
 
-  //if(days>1000){
-  //std::cout << days << " " << person->age << " " << nrisks << std::endl;
-  //  }
-  int nvaccines = 4;
+  int nvaccines = 1;
   for(int i=0; i<nvaccines; i++){
     //random not vaccinated with this dose
-    if(dis(this->gen) < 0.01) break;
+    if(dis(this->gen) < 0.5) break;
 
     days += int(vaccine_dis(this->gen));
-    //std::cout << i << " " << days << " " << p_vaccine << std::endl;
     person->vaccine_dates.push_back(days);
   }
 
@@ -269,6 +265,7 @@ Person* Population::generate(){
     //double vmax = scale*normal(date+mean,date+mean,width);
 
 
+    int vdate = ((person->vaccine_dates.size()>0) ?person->vaccine_dates.at(0) : -1);
     for(int i=date; i<date+28; i++){
       double p = person->get_immune_response(i);
 
@@ -276,7 +273,13 @@ Person* Population::generate(){
       scale = 1;
       double v = scale*normal(i,date + mean, width);
 
-      double pbad = v*pow(p+1,-2);//0.5);
+
+      double pbad = v*pow(p+1,-5);//-0.2);//0.5);
+
+      if(i==date && vdate<date && vdate>0){
+      //   std::cout << " "<< p << " " << v << " " << pbad << std::endl;
+      }
+
       double rand = dis(this->gen);
       if (rand < pbad){
         person->outcome_dates.push_back(i);

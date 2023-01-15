@@ -29,3 +29,7 @@ run_pandemic <- function(n = 300L) {
     .Call(`_seave_run_pandemic`, n)
 }
 
+generate_simple_vaccine_effectiveness <- function(n = 10000) {
+    .Call(`_seave_generate_simple_vaccine_effectiveness`, n)
+}
+

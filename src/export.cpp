@@ -427,4 +427,62 @@ std::vector<double> run_pandemic(int n=300){
 }
 
 
+// [[Rcpp::export]]
+Rcpp::DataFrame generate_simple_vaccine_effectiveness(double n=10000){
+
+  Population *pop = new Population();
+  Pandemic *pandemic = new Pandemic();
+
+  std::map<std::string,Variant*> variants;
+  variants["A"] = new Variant(0.4,50,20);
+
+  pandemic->set_variants(variants);
+  pop->set_pandemic(pandemic);
+
+
+  std::uniform_int_distribution<int> dist(1,365*2);
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+
+  Rcpp::IntegerVector id(n);
+  Rcpp::IntegerVector age(n);
+  Rcpp::CharacterVector sex(n);
+  Rcpp::NumericVector bmi(n);
+  Rcpp::IntegerVector nrisks(n);
+  Rcpp::IntegerVector date(n);
+  Rcpp::IntegerVector vdate1(n);
+
+  //resolution of measurement
+  std::normal_distribution<double> res(1,0.1);
+
+  int i=0;
+  while(i<n){
+    Person *p = pop->generate();
+
+    id[i] = i+1;
+    age[i] = p->get_age();
+    sex[i] = p->get_sex();
+    bmi[i] = p->get_bmi();
+    nrisks[i] = p->comorbidities.size();
+    vdate1[i] = (p->vaccine_dates.size() > 0) ? p->vaccine_dates.at(0) : NA_REAL;
+    date[i] = (p->outcome_dates.size() > 0) ? p->outcome_dates.at(0) : NA_REAL;
+
+    i++;
+  }
+
+
+  Rcpp::DataFrame df =  Rcpp::DataFrame::create(
+    Rcpp::Named("id")=id,
+    Rcpp::Named("age")=age,
+    Rcpp::Named("sex")=sex,
+    Rcpp::Named("bmi")=bmi,
+    Rcpp::Named("nrisks")=nrisks,
+    Rcpp::Named("hosp_date")=date,
+    Rcpp::Named("v1_date")=vdate1
+  );
+
+  return df;
+}
+
+
 

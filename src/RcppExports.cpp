@@ -86,6 +86,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// generate_simple_vaccine_effectiveness
+Rcpp::DataFrame generate_simple_vaccine_effectiveness(double n);
+RcppExport SEXP _seave_generate_simple_vaccine_effectiveness(SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_simple_vaccine_effectiveness(n));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP _rcpp_module_boot_RcppSeaveEx();
 RcppExport SEXP _rcpp_module_boot_RcppSeavePandemic();
@@ -100,6 +111,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seave_get_true_response", (DL_FUNC) &_seave_get_true_response, 0},
     {"_seave_generate_serology", (DL_FUNC) &_seave_generate_serology, 1},
     {"_seave_run_pandemic", (DL_FUNC) &_seave_run_pandemic, 1},
+    {"_seave_generate_simple_vaccine_effectiveness", (DL_FUNC) &_seave_generate_simple_vaccine_effectiveness, 1},
     {"_rcpp_module_boot_RcppSeaveEx", (DL_FUNC) &_rcpp_module_boot_RcppSeaveEx, 0},
     {"_rcpp_module_boot_RcppSeavePandemic", (DL_FUNC) &_rcpp_module_boot_RcppSeavePandemic, 0},
     {"_rcpp_module_boot_RcppSeavePerson", (DL_FUNC) &_rcpp_module_boot_RcppSeavePerson, 0},
