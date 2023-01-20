@@ -118,6 +118,14 @@ std::string Population::get_sex(){
   return sex;
 }
 
+std::string Population::get_ethnicity(){
+  std::discrete_distribution<> w{0.8,0.2};
+  std::vector<std::string> ethnicities{"White","Other"};
+  int i = w(this->gen);
+  std::string ethnicity = ethnicities[i];
+  return ethnicity;
+}
+
 
 double lognormal(double x, double mean, double stddev)
 {
@@ -128,9 +136,30 @@ double normal(double x, double mu, double sigma){
   return 1.0 / (sigma * sqrt(2.0 * M_PI)) * exp(-(pow((x - mu)/sigma, 2)/2.0));
 }
 
+std::normal_distribution<> vdismean(7, 3);
+std::normal_distribution<> vdiswidth(2, 1);
+std::normal_distribution<> vdisscale(0.1, 0.05);
+std::random_device rd;
+std::mt19937_64 gen(rd());
+void Person::create_infection_response(){
+  for(auto start: this->infection_dates){
+    //simulate 28 days from infection
+    double mean = vdismean(gen);
+    double scale = vdisscale(gen);
+    if(scale<0) scale=0;
+    double width = vdiswidth(gen);
 
 
-void Person::set_immune_response(){
+   auto res = [start,mean,width,scale](int x){
+     double retval = scale*normal(x,start + mean, width);
+     return double(retval);
+   };
+   this->_virus_response.push_back(res);
+  }
+}
+
+
+void Person::create_immune_response(){
   int nvaccine = 0;
 
   for(auto start: this->vaccine_dates){
@@ -150,6 +179,7 @@ void Person::set_immune_response(){
 
      //std::cout << nvaccine << " " << scale << " " << m_age << " " << m_bmi << " " << m_c <<std::endl;
      scale *= m_age*m_bmi*m_c;
+
      //''scale *= m_c;
      //scale = m_c;//pow(1+this->comorbidities.size(),-1);
 
@@ -190,6 +220,21 @@ void Person::set_immune_response(){
 
 }
 
+
+
+
+double Person::get_hazard(int x){
+
+  double p = this->get_immune_response(x);
+  double v = this->get_infection_level(x);
+
+  //double nrisks = this->comorbidities.size();
+
+  double pbad = v*pow(p+1,-0.5);
+  return (pbad);
+
+}
+
 double Person::get_immune_response(int x){
   double retval = 0;
   for(auto fun: this->_immune_response){
@@ -198,20 +243,27 @@ double Person::get_immune_response(int x){
   return retval;
 }
 
+double Person::get_infection_level(int x){
+  double retval = 0;
+  for(auto fun: this->_virus_response){
+    retval += fun(x);
+  }
+  return retval;
+}
+
 std::uniform_real_distribution<> dis(0, 1);
-std::normal_distribution<> vaccine_dis(80, 20);
+/*std::normal_distribution<> vaccine_dis(80, 20);
 std::normal_distribution<> vdismean(7, 3);
 std::normal_distribution<> vdiswidth(2, 1);
 std::normal_distribution<> vdisscale(0.1, 0.01);
-
+*/
 Person* Population::generate(){
 
-  //2 years;
-  int ndays = 365*2;
 
   Person *person = new Person();
   person->age = this->get_age();
   person->sex = this->get_sex();
+  person->ethnicity = this->get_ethnicity();
   person->imd = this->get_imd();
   person->bmi = this->get_bmi();
 
@@ -222,38 +274,10 @@ Person* Population::generate(){
     }
   }
 
-  //simulate infections
-  for(int i=0; i<ndays; i++){
-    double p = this->pandemic->get_p_infection(i);
-    if(dis(this->gen) < p){
-      person->infection_dates.push_back(i);
-      i+=50;//dont get infected for another 50 days
-    }
-  }
+  return person;
 
-  // max 3 vaccines
-  //start 100 days into the pandemic
 
-  int nrisks = person->get_nrisks();
-  double p_vaccine = pow((person->age+1)/100.,-0.3);
-  //std::cout << p_vaccine << std::endl;
-  if(nrisks>0){
-    p_vaccine *= pow(nrisks/5.,-0.3);
-  }
-
-  int days = int(0);//*p_vaccine);
-  //days = 100;
-
-  int nvaccines = 1;
-  for(int i=0; i<nvaccines; i++){
-    //random not vaccinated with this dose
-    if(dis(this->gen) < 0.5) break;
-
-    days += int(vaccine_dis(this->gen));
-    person->vaccine_dates.push_back(days);
-  }
-
-  person->set_immune_response();
+  /*
 
   //simulate outcomes after infections
 
@@ -291,6 +315,7 @@ Person* Population::generate(){
   }
 
   return person;
+   */
 }
 
 Person Population::test(){
