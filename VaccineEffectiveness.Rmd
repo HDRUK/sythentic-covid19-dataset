@@ -1,0 +1,74 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+df <- generate_simple_vaccine_effectiveness(n=100000) %>% as_tibble
+df
+```
+
+
+```{r}
+library(survival)
+library(dplyr)
+
+dataset <- df
+
+dataset$age_group <- relevel(as.factor(cut(dataset$age, 
+                         breaks = c(0, 30, 40, 50, 60, 80, 100), 
+                         labels = c("0-30", "31-40", "41-50", "51-60", "61-80", "81-100")))
+                         ,ref='41-50')
+
+# Create a new variable "time_since_vaccination" in days
+dataset$time_since_vaccination <- ifelse(is.na(dataset$v1_date),NA, dataset$hosp_date - dataset$v1_date)
+
+dataset <- dataset %>% 
+  mutate(vaccination_status = ifelse(is.na(v1_date) | v1_date > hosp_date, 0, 1)) %>%
+  mutate(nrisks=as.factor(ifelse(nrisks>2,'3+',as.character(nrisks))))
+
+
+# Fit a Cox proportional hazards model
+#model <- coxph(Surv(hosp_date, event = !is.na(hosp_date)) ~ vaccination_status + time_since_vaccination + age_group + sex + bmi + nrisks, data = dataset)
+
+model <- coxph(Surv(hosp_date, event = !is.na(hosp_date)) ~ vaccination_status + age_group + sex + nrisks + bmi , data = dataset)
+
+# Print the summary of the model
+summary(model)
+
+# Obtain the hazard ratio for vaccination status
+exp(coef(model)[1])
+
+```
+
+```{r}
+library(forestplot)
+
+# Create a dataframe with the coefficients and standard errors from the model
+coef_df <- data.frame(covariate = names(coef(model)),
+                     estimate = coef(model),
+                     lower = confint(model)[,1],
+                     upper = confint(model)[,2])
+# Add the hazard ratios and their confidence intervals to the dataframe
+coef_df$estimate <- exp(coef_df$estimate)
+coef_df$lower <- exp(coef_df$lower)
+coef_df$upper <- exp(coef_df$upper)
+coef_df
+```
+
+```{r}
+library(ggplot2)
+
+# Create the forest plot
+p <- ggplot(coef_df, aes(y = covariate, x = estimate, xmin = lower, xmax = upper)) +
+  geom_pointrange(size = 1, shape = 21, fill = "darkgreen") +
+  geom_vline(xintercept = 1.0, linetype = "dotted") +
+  xlab("Hazard Ratio") +
+  ylab("Covariate") +
+  scale_x_log10(limits = c(0.2, 5)) +
+  theme_classic()
+
+p
+
+```
+

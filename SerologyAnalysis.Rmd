@@ -1,0 +1,122 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+rm(df)
+df <- my_pandemic_generate(n=100000)
+```
+
+```{r}
+risks <- df %>% select(10:17) %>% colnames()
+max_date <- max(df$hosp_date) + 20
+df_ana <- df %>% as_tibble %>%
+          mutate(age=cut(age,breaks=c(0,20,40,60,80,1000)),
+                 bmi=cut(bmi,breaks=c(0,18.5,25,30,1000))) %>%
+          mutate(
+            insufficient_response = as.factor(ifelse(igg<20,'Yes','No')),
+            outcome_hosp = case_when(
+              is.na(hosp_date) |  hosp_date<meas_date ~ 0,#
+              TRUE ~ 1
+            ),
+            pandemic_time = meas_date,
+            vaccine_status = case_when(v1_date<meas_date~1, TRUE ~ 0),
+            time_since_vaccination = ifelse(!is.na(v1_date) & v1_date<meas_date,meas_date-v1_date,0)
+          ) %>%
+          mutate_at(vars(risks,age,bmi,sex,vaccine_status,risks),as.factor) %>%
+          mutate(age=relevel(age,ref='(40,60]'),
+                 bmi=relevel(bmi,ref='(18.5,25]')) %>%
+          mutate(time=ifelse(outcome_hosp==1,hosp_date,max_date))
+         
+df_ana %>% filter(vaccine_status==1) %>% 
+           group_by(outcome_hosp,age) %>% summarise(n=n()) 
+```
+
+```{r}
+f <- paste0('Surv(hosp_date, event = !is.na(hosp_date)) ~ age + bmi + vaccine_status ')
+f <- paste0('Surv(time) ~ age + bmi + vaccine_status ')
+f <- paste0('Surv(time) ~ age + bmi ')
+model <- with(df_ana %>% filter(vaccine_status==1),coxph(as.formula(f)))
+
+coef_df <- data.frame(covariate = names(coef(model)),
+                     estimate = coef(model),
+                     lower = confint(model)[,1],
+                     upper = confint(model)[,2])
+# Add the hazard ratios and their confidence intervals to the dataframe
+coef_df$estimate <- exp(coef_df$estimate)
+coef_df$lower <- exp(coef_df$lower)
+coef_df$upper <- exp(coef_df$upper)
+
+xmin<- 0.9*min(coef_df$lower)
+xmax<- 1./(1.1*min(coef_df$lower))
+xmax2<- 1.1*max(coef_df$upper)
+if(xmax2>xmax){
+  xmax <- xmax2
+}
+
+p <- ggplot(coef_df, aes(y = covariate, x = estimate, xmin = lower, xmax = upper)) +
+  geom_pointrange(size = 1, shape = 21, fill = "darkgreen") +
+  geom_vline(xintercept = 1.0, linetype = "dotted") +
+  xlab("Hazard Ratio") +
+  ylab("Covariate") +
+  scale_x_log10(limits = c(xmin,xmax)) +
+  theme_classic()
+coef_df
+
+```
+
+```{r}
+f <- paste0('insufficient_response ~ age + bmi + vaccine_status + s(pandemic_time) + s(time_since_vaccination) + ',paste0(risks,collapse = ' + '))
+f <- paste0('outcome_hosp ~ age + bmi + vaccine_status ')#+ ',paste0(risks,collapse = ' + '))
+model <- gam(as.formula(f),
+             data=df_ana,
+             family=binomial())
+
+results <- eavehelpers::get_or_from_gam(model)
+p <- eavehelpers::plot_ratios(results %>% rename(Nominal=OR),xmin=0.001,xmax=1000)
+results
+```
+
+
+```{r}
+df_ana %>% group_by(vaccine_status,outcome_hosp) %>% summarise(n=n())
+```
+
+```{r}
+library(mgcv)
+model <- gam(outcome_hosp ~  insufficient_response + age + s(time_since_vaccination) + s(pandemic_time),
+             data=df_ana,
+             family=binomial())
+
+summary(model)
+```
+
+```{r}
+library(eavehelpers)
+results <- eavehelpers::get_or_from_gam(model)
+results
+```
+
+
+```{r,fig.height = 4, fig.width = 4}
+library(phsstyles)
+eavehelpers::plot_ratios(results %>% rename(Nominal=OR))
+```
+
+
+
+
+
+```{r}
+eavehelpers::plot_gam(model,'time_since_vaccination',var_ref=0) +
+  facet_grid(~cat,scales="free") +  
+  coord_flip() + scale_y_log10(labels = ~ signif(.x,digits=1)) +
+  theme(strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        legend.position="top")
+```
+
+
+
+
