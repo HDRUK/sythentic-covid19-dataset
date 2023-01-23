@@ -207,4 +207,44 @@ Rcpp::DataFrame generate_ace(double n=30000){
 }
 
 
+// [[Rcpp::export]]
+Rcpp::DataFrame truth_ace(int np=1){ 
+  int ndays = 365*2;
+  int n = ndays*np;
+  Rcpp::IntegerVector id(n);
+  Rcpp::IntegerVector day(n);
+  Rcpp::NumericVector immune(n);
+  Rcpp::NumericVector virus(n);
+  Rcpp::NumericVector hazard(n);
+  
+  Ace *cohort = new Ace();
+
+  int j=0;
+  for (int ip=0; ip<np; ip++){
+  
+    Person *p = cohort->simulate();
+    
+    for(int i=0; i<ndays;i++){
+      id[j] = ip;
+      day[j] = i;
+      immune[j] = p->get_immune_response(i);
+      virus[j] = p->get_infection_level(i);
+      hazard[j] = p->get_hazard(i);
+      j++;
+    }
+    
+  }
+  
+  Rcpp::DataFrame df =  Rcpp::DataFrame::create(
+    Rcpp::Named("id")=id,
+    Rcpp::Named("day")=day,
+    Rcpp::Named("immune")=immune,
+    Rcpp::Named("virus")=virus,
+    Rcpp::Named("hazard")=hazard
+  );
+  return df;
+  
+}
+
+
 

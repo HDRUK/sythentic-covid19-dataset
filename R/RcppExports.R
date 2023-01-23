@@ -5,6 +5,10 @@ generate_ace <- function(n = 30000) {
     .Call(`_seave_generate_ace`, n)
 }
 
+truth_ace <- function(np = 1L) {
+    .Call(`_seave_truth_ace`, np)
+}
+
 generate_ages <- function(n = 10000) {
     .Call(`_seave_generate_ages`, n)
 }

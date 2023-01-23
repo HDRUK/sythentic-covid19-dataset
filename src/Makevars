@@ -6,4 +6,4 @@
 ##    CXX_STD       to select C++11 via 'CXX11'
 ## But for standard builds without external dependencies, nothing is needed
 
-CXX_STD = CXX17
+CXX_STD = CXX11

@@ -2,6 +2,7 @@
 #include <map>
 #include <typeinfo>
 #include <cmath>
+#include <cfloat>
 
 Population::Population(){
   std::random_device rd;
@@ -173,8 +174,8 @@ void Person::create_immune_response(){
      double m_bmi = pow((1+this->bmi)/30.,-0.1);//-0.7);
 
      double m_c = 1;
-     for(auto const& [name, comorbidity]: this->comorbidities){
-       m_c *= comorbidity->get_immune_influence(this);
+     for(auto c: this->comorbidities){
+       m_c *= c.second->get_immune_influence(this);
      }
 
      //std::cout << nvaccine << " " << scale << " " << m_age << " " << m_bmi << " " << m_c <<std::endl;
@@ -186,7 +187,7 @@ void Person::create_immune_response(){
      auto res = [scale,start,width,s](int x){
          double _x = (x-start)/100.;
          double part1 = scale*lognormal(_x,log(width),log(s));
-         if(isnan(part1)) part1 = 0;
+         if(std::isnan(part1)) part1 = 0;
          //part1 = 0;
 
          double part2 = (scale*0.8)*(_x/(_x + 0.1));
@@ -208,7 +209,7 @@ void Person::create_immune_response(){
     auto res = [scale,start,width,s](int x){
       double _x = (x-start)/100.;
       double part1 = scale*lognormal(_x,log(width),log(s));
-      if(isnan(part1)) part1 = 0;
+      if(std::isnan(part1)) part1 = 0;
 
       double part2 = (scale*0.8)*(_x/(_x + 0.1));
       if (x<start) part2 = 0;
@@ -268,9 +269,9 @@ Person* Population::generate(){
   person->bmi = this->get_bmi();
 
 
-  for(auto const& [name, comorbidity] : this->comorbidities){
-    if(dis(this->gen) < comorbidity->get_prevelance(person) ){
-      person->comorbidities[name] = comorbidity;
+  for(auto c : this->comorbidities){
+    if(dis(this->gen) < c.second->get_prevelance(person) ){
+      person->comorbidities[c.first] = c.second;
     }
   }
 

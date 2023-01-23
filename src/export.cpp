@@ -205,10 +205,10 @@ Rcpp::List generate_dataframe(double n=100){
 
     i++;
 
-    for(auto const& [name, comorbidity]: p->comorbidities){
+    for(auto c: p->comorbidities){
       //gp << id << "," << name << std::endl;
       gp_id[i_gp] = _id;
-      gp_condition[i_gp] = name;
+      gp_condition[i_gp] = c.first;
       i_gp++;
     }
 

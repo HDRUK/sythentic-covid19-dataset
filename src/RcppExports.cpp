@@ -5,11 +5,6 @@
 
 using namespace Rcpp;
 
-#ifdef RCPP_USE_GLOBAL_ROSTREAM
-Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
-Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
-#endif
-
 // generate_ace
 Rcpp::DataFrame generate_ace(double n);
 RcppExport SEXP _seave_generate_ace(SEXP nSEXP) {
@@ -18,6 +13,17 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type n(nSEXP);
     rcpp_result_gen = Rcpp::wrap(generate_ace(n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// truth_ace
+Rcpp::DataFrame truth_ace(int np);
+RcppExport SEXP _seave_truth_ace(SEXP npSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type np(npSEXP);
+    rcpp_result_gen = Rcpp::wrap(truth_ace(np));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -137,6 +143,7 @@ RcppExport SEXP _rcpp_module_boot_RcppSeavePopulation();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_seave_generate_ace", (DL_FUNC) &_seave_generate_ace, 1},
+    {"_seave_truth_ace", (DL_FUNC) &_seave_truth_ace, 1},
     {"_seave_generate_ages", (DL_FUNC) &_seave_generate_ages, 1},
     {"_seave_generate_bmi", (DL_FUNC) &_seave_generate_bmi, 1},
     {"_seave_generate_risks", (DL_FUNC) &_seave_generate_risks, 1},
