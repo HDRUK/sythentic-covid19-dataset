@@ -179,7 +179,9 @@ void Person::create_immune_response(){
      }
 
      //std::cout << nvaccine << " " << scale << " " << m_age << " " << m_bmi << " " << m_c <<std::endl;
-     scale *= m_age*m_bmi*m_c;
+     //scale *= m_age*m_bmi*m_c;
+
+
 
      //''scale *= m_c;
      //scale = m_c;//pow(1+this->comorbidities.size(),-1);
@@ -187,11 +189,19 @@ void Person::create_immune_response(){
      auto res = [scale,start,width,s](int x){
          double _x = (x-start)/100.;
          double part1 = scale*lognormal(_x,log(width),log(s));
+         return (part1);
+         //double _x = (x-start);
+
+         part1 = scale*normal(_x,25,10);
+         return (part1);
+
          if(std::isnan(part1)) part1 = 0;
          //part1 = 0;
 
          double part2 = (scale*0.8)*(_x/(_x + 0.1));
          if (x<start) part2 = 0;
+         part2 = 0;
+
          return double(part1 + part2);
         };
      this->_immune_response.push_back(res);
@@ -205,19 +215,21 @@ void Person::create_immune_response(){
   double scale = sdis(gen);
   double width = 0.5;
   double s = 2;
-  for(auto start: this->infection_dates){
+  /*for(auto start: this->infection_dates){
     auto res = [scale,start,width,s](int x){
       double _x = (x-start)/100.;
       double part1 = scale*lognormal(_x,log(width),log(s));
       if(std::isnan(part1)) part1 = 0;
 
-      double part2 = (scale*0.8)*(_x/(_x + 0.1));
+      double part2 = (scale*0.1)*(_x/(_x + 0.1));
       if (x<start) part2 = 0;
+      part2=0;
+
 
       return double(part1 + part2);
     };
     this->_immune_response.push_back(res);
-  }
+  }*/
 
 }
 

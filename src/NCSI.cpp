@@ -8,6 +8,7 @@
 
 
 class Ace : public Population {
+
 protected:
   std::uniform_real_distribution<> dis;
   std::normal_distribution<> vaccine_dis;
@@ -41,6 +42,11 @@ public:
    while (person->age>25 || person->age<18){//} || person->comorbidities.size()>1){
      person = this->generate();
    }
+
+   /*
+   while (person->age<60 || person->comorbidities.size()<2){
+     person = this->generate();
+   }*/
 
     int days = int(0);//*p_vaccine);
     //days = 100;
@@ -208,7 +214,7 @@ Rcpp::DataFrame generate_ace(double n=30000){
 
 
 // [[Rcpp::export]]
-Rcpp::DataFrame truth_ace(int np=1){ 
+Rcpp::DataFrame truth_ace(int np=1){
   int ndays = 365*2;
   int n = ndays*np;
   Rcpp::IntegerVector id(n);
@@ -216,14 +222,14 @@ Rcpp::DataFrame truth_ace(int np=1){
   Rcpp::NumericVector immune(n);
   Rcpp::NumericVector virus(n);
   Rcpp::NumericVector hazard(n);
-  
+
   Ace *cohort = new Ace();
 
   int j=0;
   for (int ip=0; ip<np; ip++){
-  
+
     Person *p = cohort->simulate();
-    
+
     for(int i=0; i<ndays;i++){
       id[j] = ip;
       day[j] = i;
@@ -232,9 +238,9 @@ Rcpp::DataFrame truth_ace(int np=1){
       hazard[j] = p->get_hazard(i);
       j++;
     }
-    
+
   }
-  
+
   Rcpp::DataFrame df =  Rcpp::DataFrame::create(
     Rcpp::Named("id")=id,
     Rcpp::Named("day")=day,
@@ -243,7 +249,7 @@ Rcpp::DataFrame truth_ace(int np=1){
     Rcpp::Named("hazard")=hazard
   );
   return df;
-  
+
 }
 
 

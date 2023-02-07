@@ -427,10 +427,78 @@ std::vector<double> run_pandemic(int n=300){
 }
 
 
+class SeaveCohort : public Population {
+protected:
+  std::uniform_real_distribution<> dis;
+  std::normal_distribution<> vaccine_dis;
+
+  //2 years;
+  int ndays = 365*2;
+  int istart = 0;
+
+  double normal(double x, double mu, double sigma){
+    return 1.0 / (sigma * sqrt(2.0 * M_PI)) * exp(-(pow((x - mu)/sigma, 2)/2.0));
+  }
+
+public:
+  SeaveCohort() : dis(0,1),vaccine_dis(80,20),
+  Population() {};
+  Person* simulate(){
+    Person* person = this->generate();
+
+    while (person->age<18 || person->age>65 || (person->sex == "Male" && this->dis(this->gen)<0.5)) {
+      person = this->generate();
+    }
+
+
+    //simulate infections
+    for(int i=this->istart; i<this->ndays+this->istart; i++){
+      double p = this->pandemic->get_p_infection(i);
+      if(this->dis(this->gen) < p){
+        person->infection_dates.push_back(i);
+        i+=50;//dont get infected for another 50 days
+      }
+    }
+
+
+    int days = int(0);//*p_vaccine);
+    //days = 100;
+    int nvaccines = 1;
+    for(int i=0; i<nvaccines; i++){
+      //random not vaccinated with this dose
+      if(dis(this->gen) < 0.5) break;
+
+      days += int(vaccine_dis(this->gen));
+      person->vaccine_dates.push_back(days);
+    }
+
+    person->create_immune_response();
+    person->create_infection_response();
+
+
+    //simulate severe outcomes, on infection dates + 10 days
+    for(auto date: person->infection_dates){
+      for(int i = date;i<date+10;i++){
+        double h = 50.*person->get_hazard(i);
+        //std::cout << h << " " << std::endl;
+        double rand = dis(this->gen);
+        if (rand < h){
+          person->outcome_dates.push_back(i);
+        }
+        break;
+      }
+    }
+
+    return person;
+  }
+
+};
+
+
 // [[Rcpp::export]]
 Rcpp::DataFrame generate_simple_vaccine_effectiveness(double n=10000){
 
-  Population *pop = new Population();
+  SeaveCohort *pop = new SeaveCohort();
   Pandemic *pandemic = new Pandemic();
 
   std::map<std::string,Variant*> variants;
@@ -457,7 +525,7 @@ Rcpp::DataFrame generate_simple_vaccine_effectiveness(double n=10000){
 
   int i=0;
   while(i<n){
-    Person *p = pop->generate();
+    Person *p = pop->simulate();
 
     id[i] = i+1;
     age[i] = p->get_age();
