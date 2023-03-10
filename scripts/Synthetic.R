@@ -23,6 +23,13 @@ df_igg %>%
   theme_classic()
 
 
+x <- seq(0,300,1)
+data.frame(x=x) %>% mutate(y=10*x^0.3*exp(-0.01*x)) %>%
+    ggplot(aes(x=x,y=y)) +
+    geom_line()
+
+
+
 labels(person)
 
 person$vaccine_dates
