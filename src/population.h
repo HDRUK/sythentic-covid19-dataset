@@ -8,6 +8,8 @@
 #include "comorbidity.h"
 #include "pandemic.h"
 
+
+
 class Person{
 public:
   int age;
@@ -30,6 +32,7 @@ public:
   double get_bmi() { return this->bmi;};
   std::string get_sex() { return this->sex;};
   std::string get_ethnicity() { return this->ethnicity;};
+  std::vector<std::string> get_comorbidities();
   int get_imd() { return this->imd;};
   int get_nrisks() {return this->comorbidities.size();};
   void create_immune_response();

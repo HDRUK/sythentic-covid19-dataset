@@ -25,7 +25,7 @@ protected:
   }
 
 public:
-  Ace() : dis(0,1),vaccine_dis(80,20),
+  Ace() : dis(0,1),vaccine_dis(150,30),
   Population() {
     //Pandemic *pandemic = new Pandemic();
     /*std::map<std::string,Variant*> variants;

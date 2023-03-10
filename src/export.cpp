@@ -26,11 +26,13 @@ RCPP_MODULE(RcppSeavePerson){
   .field("sex", &Person::sex)
   .field("imd", &Person::imd)
   .field("bmi", &Person::bmi)
+  .field("ethnicity", &Person::ethnicity)
   .field("vaccine_dates", &Person::vaccine_dates)
   .field("infection_dates", &Person::infection_dates)
   .field("outcome_dates", &Person::outcome_dates)
   .method("get_nrisks", &Person::get_nrisks)
-  .method("get_immune_response", &Person::get_immune_response);
+  .method("get_immune_response", &Person::get_immune_response)
+  .method("get_comorbidities", &Person::get_comorbidities);
 
 }
 

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cfloat>
 
+std::normal_distribution<> random_effect(1, 0.2);
+
 Population::Population(){
   std::random_device rd;
   this->gen = std::mt19937_64(rd());
@@ -128,6 +130,11 @@ std::string Population::get_ethnicity(){
 }
 
 
+double fn_igg_response(double x, double b, double lambda)
+{
+  return b*x*exp(-1.0*lambda*x);
+}
+
 double lognormal(double x, double mean, double stddev)
 {
   return (1 / (x * stddev * sqrt(2*M_PI))) * exp(-pow((log(x) - mean), 2) / (2*pow(stddev, 2)));
@@ -163,58 +170,66 @@ void Person::create_infection_response(){
 void Person::create_immune_response(){
   int nvaccine = 0;
 
-  for(auto start: this->vaccine_dates){
-     nvaccine++;
-
-     double scale = 300*pow(nvaccine*pow(nvaccine + exp(-2*nvaccine),-1),3);
-     double width = 1;//1./scale;//(nvaccine+1)*0.3;
-     double s = 2;
-
-     double m_age = pow((1+this->age)/50.,-0.3);//-0.5);
-     double m_bmi = pow((1+this->bmi)/30.,-0.1);//-0.7);
-
-     double m_c = 1;
-     for(auto c: this->comorbidities){
-       m_c *= c.second->get_immune_influence(this);
-     }
-
-     //std::cout << nvaccine << " " << scale << " " << m_age << " " << m_bmi << " " << m_c <<std::endl;
-     //scale *= m_age*m_bmi*m_c;
-
-
-
-     //''scale *= m_c;
-     //scale = m_c;//pow(1+this->comorbidities.size(),-1);
-
-     auto res = [scale,start,width,s](int x){
-         double _x = (x-start)/100.;
-         double part1 = scale*lognormal(_x,log(width),log(s));
-         return (part1);
-         //double _x = (x-start);
-
-         part1 = scale*normal(_x,25,10);
-         return (part1);
-
-         if(std::isnan(part1)) part1 = 0;
-         //part1 = 0;
-
-         double part2 = (scale*0.8)*(_x/(_x + 0.1));
-         if (x<start) part2 = 0;
-         part2 = 0;
-
-         return double(part1 + part2);
-        };
-     this->_immune_response.push_back(res);
-  }
-
-  //width = 0.5;
-  //s = 2;
   std::uniform_real_distribution<> sdis(0, 10);
   std::random_device rd;
   std::mt19937_64 gen(rd());
   double scale = sdis(gen);
   double width = 0.5;
   double s = 2;
+
+  for(auto start: this->vaccine_dates){
+     nvaccine++;
+
+     double scale = 300;//*pow(nvaccine*pow(nvaccine + exp(-2*nvaccine),-1),3);
+     double lambda = 0.1;//*(pow(nvaccine,-0.5));
+
+     double m_age = pow((1+this->age)/50.,-0.3);//-0.5);
+     double m_bmi = pow((1+this->bmi)/30.,-0.1);//-0.7);
+
+     double m_c = m_age*m_bmi;
+     for(auto c: this->comorbidities){
+       m_c *= c.second->get_immune_influence(this);
+     }
+
+     //scale *= m_c*random_effect(gen);
+     //lambda *= pow(m_c,0.5)*random_effect(gen);
+
+     auto res = [start,scale,lambda](int x){
+         double _x = x-start;
+         if(_x<0) {
+           return 0.;
+         }
+         double retval = fn_igg_response(_x,
+                                         scale,
+                                         lambda);
+         return retval;
+     };
+     /*
+     auto res = [scale,start,width,s](int x){
+         double _x = (x-start)/100.;
+         double part1 = scale*lognormal(_x,log(width),log(s));
+         if(std::isnan(part1)) part1 = 0;
+         //return (part1);
+         //double _x = (x-start);
+
+         //part1 = scale*normal(_x,25,10);
+         //return (part1);
+
+         //if(std::isnan(part1)) part1 = 0;
+         //part1 = 0;
+
+         double part2 = (scale*0.8)*(_x/(_x + 0.1));
+         if (x<start) part2 = 0;
+         //part2 = 0;
+
+         return double(part1 + part2);//
+     };*/
+     this->_immune_response.push_back(res);
+  }
+
+  //width = 0.5;
+  //s = 2;
+
   /*for(auto start: this->infection_dates){
     auto res = [scale,start,width,s](int x){
       double _x = (x-start)/100.;
@@ -231,6 +246,15 @@ void Person::create_immune_response(){
     this->_immune_response.push_back(res);
   }*/
 
+}
+
+
+std::vector<std::string> Person::get_comorbidities() {
+  std::vector<std::string> retval;
+  for(auto const& c: this->comorbidities){
+    retval.push_back(c.first);
+  }
+  return (retval);
 }
 
 
@@ -265,11 +289,16 @@ double Person::get_infection_level(int x){
 }
 
 std::uniform_real_distribution<> dis(0, 1);
-/*std::normal_distribution<> vaccine_dis(80, 20);
+/*
 std::normal_distribution<> vdismean(7, 3);
 std::normal_distribution<> vdiswidth(2, 1);
 std::normal_distribution<> vdisscale(0.1, 0.01);
 */
+
+//std::vector<Person *> Populat
+
+
+
 Person* Population::generate(){
 
 
@@ -332,7 +361,21 @@ Person* Population::generate(){
 }
 
 Person Population::test(){
+  std::normal_distribution<> vaccine_dis(90,20);
   Person* p = this->generate();
+
+  int days = int(0);
+  int nvaccines = 5;
+  for(int i=0; i<nvaccines; i++){
+    //random not vaccinated with this dose
+    if(dis(this->gen) < 0.1) break;
+    days += int(vaccine_dis(this->gen));
+    p->vaccine_dates.push_back(days);
+  }
+
+  p->create_immune_response();
+  p->create_infection_response();
+
   return *p;
 }
 

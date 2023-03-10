@@ -7,13 +7,14 @@ library(seave)
 
 
 df_truth <- truth_ace(3)
-df_truth %>% mutate(id=as.factor(id)) %>%
+df_truth %>% mutate(id=as.factor(id+1)) %>%
              ggplot(aes(x=day,y=immune,group=id,color=id)) +
              geom_line() +
-             labs(x='Date [days]',y='Immune Response [arb]',color='Person')
+             labs(x='Date [days]',y='Immune Response [arb]',color='Person') +
+             theme_classic()
 
 
-df_ace <- generate_ace(50000) %>% as_tibble
+df_ace <- generate_ace(5000) %>% as_tibble
 
 
 df_ace %>% ggplot(aes(x=IgG_BAU_wuhan_average,
@@ -31,6 +32,22 @@ df <- df_ace %>% filter(vaccine_dose>0) %>% mutate(
         positivity_date > vaccine_date2 ~ (positivity_date - vaccine_date2),
         positivity_date > vaccine_date1 ~ (positivity_date - vaccine_date1)
       ))
+
+
+temp <- df %>% select(IgG_BAU_wuhan_average,time,vaccine_dose,age,sex) %>%
+       mutate(timeG=cut(time,breaks=seq(0,200,10),labels=seq(10,200,10))) %>%
+       mutate(ageG=cut(age,breaks=seq(18,26,2))) %>%
+       mutate(x=as.numeric(as.character(timeG))) %>%
+       group_by(x,sex,vaccine_dose) %>%
+       summarise(sd=sd(IgG_BAU_wuhan_average)/sqrt(n()),
+                 y=mean(IgG_BAU_wuhan_average))
+
+temp %>%
+       ggplot(aes(x=x,y=y,color=as.factor(sex))) +
+       geom_pointrange((aes(ymin=y-sd,ymax=y+sd))) +
+       scale_color_discrete_phs(palette='all') +
+       facet_grid(. ~ vaccine_dose,scale='free',space='free') +
+       labs(x='Days since Vaccination',y='IgG [BAU/ml]',color='Sex')
 
 
 model <- gam(IgG_BAU_wuhan_average ~ s(time,by=vaccine_dose) + age + sex , data=df)
