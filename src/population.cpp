@@ -4,11 +4,12 @@
 #include <cmath>
 #include <cfloat>
 
-std::normal_distribution<> random_effect(1, 0.2);
+std::normal_distribution<> random_effect(1, 0.3);
+//std::uniform_real_distribution<> random_zero_one(0, 1);
 
 Population::Population(){
   std::random_device rd;
-  this->gen = std::mt19937_64(rd());
+  std::mt19937_64 gen(rd());
 
   //create a pandemic
   //this->pandemic = new Pandemic();
@@ -43,10 +44,15 @@ Population::Population(){
 
   this->comorbidities["blood_cancer"] = new Comorbidity(
     [](Person* p){
-      return 0.01*(p->age/80);
+      return 0.1*(p->age/80); 
       },
-    [](Person* p){
-        return 0.1;
+    [random_effect,gen](Person* p){
+        //if (random_zero_one(gen)<0.25){
+        //  return double(0.);
+        //}
+        //else{
+          return 0.7*random_effect(gen); 
+        //}
     }
   );
 
@@ -130,9 +136,9 @@ std::string Population::get_ethnicity(){
 }
 
 
-double fn_igg_response(double x, double b, double lambda)
+double fn_igg_response(double x, double b, double c, double lambda)
 {
-  return b*x*exp(-1.0*lambda*x);
+  return b*pow(x,c)*exp(-1.0*lambda*x);
 }
 
 double lognormal(double x, double mean, double stddev)
@@ -180,8 +186,9 @@ void Person::create_immune_response(){
   for(auto start: this->vaccine_dates){
      nvaccine++;
 
-     double scale = 300;//*pow(nvaccine*pow(nvaccine + exp(-2*nvaccine),-1),3);
-     double lambda = 0.1;//*(pow(nvaccine,-0.5));
+     double scale = 200*pow(nvaccine*pow(nvaccine + exp(-2*nvaccine),-1),3);
+     double lambda = 0.01;//*(pow(nvaccine,-0.5));
+     double rise = 0.4;
 
      double m_age = pow((1+this->age)/50.,-0.3);//-0.5);
      double m_bmi = pow((1+this->bmi)/30.,-0.1);//-0.7);
@@ -191,16 +198,18 @@ void Person::create_immune_response(){
        m_c *= c.second->get_immune_influence(this);
      }
 
-     //scale *= m_c*random_effect(gen);
-     //lambda *= pow(m_c,0.5)*random_effect(gen);
+     scale *= m_c*pow(random_effect(gen),0.3);
+     //lambda *= pow(m_c,0.2)*pow(random_effect(gen),0.2);
+     //rise *= pow(m_c,0.3)*pow(random_effect(gen),0.3);
 
-     auto res = [start,scale,lambda](int x){
+     auto res = [start,scale,rise,lambda](int x){
          double _x = x-start;
          if(_x<0) {
            return 0.;
          }
          double retval = fn_igg_response(_x,
                                          scale,
+                                         rise,
                                          lambda);
          return retval;
      };
