@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <cctype>
 
 RCPP_MODULE(RcppSeaveEx){
   Rcpp::class_<Variant>("Variant")
@@ -16,7 +17,9 @@ RCPP_MODULE(RcppSeaveEx){
 RCPP_MODULE(RcppSeavePandemic){
   Rcpp::class_<Pandemic>("Pandemic")
    .constructor()
-   .method("run",&Pandemic::run);
+   .method("run",&Pandemic::run)
+   .method("get_p_infection",&Pandemic::get_p_infection)
+   .method("create_default_variants",&Pandemic::create_default_variants);
 }
 
 RCPP_MODULE(RcppSeavePerson){
@@ -38,9 +41,14 @@ RCPP_MODULE(RcppSeavePerson){
 
 RCPP_EXPOSED_CLASS(Person);
 
+RCPP_EXPOSED_CLASS(Population);
+
+RCPP_EXPOSED_CLASS(Pandemic);
+
 RCPP_MODULE(RcppSeavePopulation){
   Rcpp::class_<Population>("Population")
   .constructor()
+  .method("set_pandemic",&Population::set_pandemic)
   .method("generate", &Population::test);
 }
 
@@ -553,6 +561,10 @@ Rcpp::DataFrame generate_simple_vaccine_effectiveness(double n=10000){
 
   return df;
 }
+
+
+
+
 
 
 

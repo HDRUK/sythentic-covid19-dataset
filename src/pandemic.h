@@ -10,9 +10,10 @@ private:
 public:
   Pandemic();
   void set_variants(std::map<std::string, Variant*> variants);
+  void create_default_variants();
   std::map<std::string,Variant*> get_variants();
   std::vector<double> run(std::vector<double>);
-  double get_p_infection(int day);
+  double get_p_infection(double day);
 };
 
 #endif

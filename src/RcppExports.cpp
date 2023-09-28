@@ -10,6 +10,18 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// generate_eave
+Rcpp::List generate_eave(double n, int id_start);
+RcppExport SEXP _seave_generate_eave(SEXP nSEXP, SEXP id_startSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type id_start(id_startSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_eave(n, id_start));
+    return rcpp_result_gen;
+END_RCPP
+}
 // generate_ace
 Rcpp::DataFrame generate_ace(double n);
 RcppExport SEXP _seave_generate_ace(SEXP nSEXP) {
@@ -140,6 +152,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// generate_carrot_test
+Rcpp::List generate_carrot_test(int n, int npeople, int ncodes);
+RcppExport SEXP _seave_generate_carrot_test(SEXP nSEXP, SEXP npeopleSEXP, SEXP ncodesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type npeople(npeopleSEXP);
+    Rcpp::traits::input_parameter< int >::type ncodes(ncodesSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_carrot_test(n, npeople, ncodes));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP _rcpp_module_boot_RcppSeaveEx();
 RcppExport SEXP _rcpp_module_boot_RcppSeavePandemic();
@@ -147,6 +172,7 @@ RcppExport SEXP _rcpp_module_boot_RcppSeavePerson();
 RcppExport SEXP _rcpp_module_boot_RcppSeavePopulation();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_seave_generate_eave", (DL_FUNC) &_seave_generate_eave, 2},
     {"_seave_generate_ace", (DL_FUNC) &_seave_generate_ace, 1},
     {"_seave_truth_ace", (DL_FUNC) &_seave_truth_ace, 1},
     {"_seave_generate_ages", (DL_FUNC) &_seave_generate_ages, 1},
@@ -159,6 +185,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_seave_generate_simple_vaccine_effectiveness", (DL_FUNC) &_seave_generate_simple_vaccine_effectiveness, 1},
     {"_seave_truth_generate", (DL_FUNC) &_seave_truth_generate, 0},
     {"_seave_my_pandemic_generate", (DL_FUNC) &_seave_my_pandemic_generate, 1},
+    {"_seave_generate_carrot_test", (DL_FUNC) &_seave_generate_carrot_test, 3},
     {"_rcpp_module_boot_RcppSeaveEx", (DL_FUNC) &_rcpp_module_boot_RcppSeaveEx, 0},
     {"_rcpp_module_boot_RcppSeavePandemic", (DL_FUNC) &_rcpp_module_boot_RcppSeavePandemic, 0},
     {"_rcpp_module_boot_RcppSeavePerson", (DL_FUNC) &_rcpp_module_boot_RcppSeavePerson, 0},

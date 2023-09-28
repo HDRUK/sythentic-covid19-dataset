@@ -4,22 +4,45 @@
 #include <cmath>
 #include <cfloat>
 
-std::normal_distribution<> random_effect(1, 0.3);
+std::normal_distribution<> random_effect(1, 0.2);
 //std::uniform_real_distribution<> random_zero_one(0, 1);
+
+
+std::uniform_real_distribution<> random_zero_one(0, 1);
+double immune_influence(double p_effect, double p_fail=0.){
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  if (random_zero_one(gen)<p_fail){
+    return double(0.);
+  }
+  else{
+    return (p_effect*random_effect(gen));
+  }
+}
+
+double get_vaccine_product_influence(int product){
+  if(product==1){//worst one
+    return double(0.6);
+  }
+  else if(product==2){
+    return double(0.9);
+  }
+  else{
+    return 1;
+  }
+}
+
 
 Population::Population(){
   std::random_device rd;
   std::mt19937_64 gen(rd());
-
-  //create a pandemic
-  //this->pandemic = new Pandemic();
 
   this->comorbidities["diabetes"] = new Comorbidity(
     [](Person* p){
       return 0.4*(pow(p->age/70.,0.5))*(pow(p->bmi/25.,2));
     },
     [](Person* p){
-      return 0.8;
+      return immune_influence(0.99,0.01);
     }
   );
 
@@ -28,7 +51,7 @@ Population::Population(){
       return 0.2*(pow(p->age/50.,0.5))*(pow(p->bmi/25.,2));
     },
     [](Person* p){
-      return 0.7;//*(pow(p->age/50.,0.5));
+      return immune_influence(1.0,0.0);
     }
   );
 
@@ -37,22 +60,17 @@ Population::Population(){
       return 0.1*(pow(p->age/60.,1.2))*(pow(p->bmi/25.,0.5));
     },
     [](Person* p){
-      return 1;
+      return immune_influence(0.96,0.05);
     }
   );
 
 
   this->comorbidities["blood_cancer"] = new Comorbidity(
     [](Person* p){
-      return 0.1*(p->age/80); 
+      return 0.1*(p->age/80);
       },
-    [random_effect,gen](Person* p){
-        //if (random_zero_one(gen)<0.25){
-        //  return double(0.);
-        //}
-        //else{
-          return 0.7*random_effect(gen); 
-        //}
+    [](Person* p){
+      return immune_influence(0.8,0.2);
     }
   );
 
@@ -61,7 +79,7 @@ Population::Population(){
       return 0.02*(p->age/80);
     },
     [](Person* p){
-      return 0.2;
+      return immune_influence(0.7,0.12);
     }
   );
 
@@ -70,7 +88,7 @@ Population::Population(){
       return 0.07*(p->age/80)*pow(p->bmi/30.,3);
     },
     [](Person* p){
-      return 0.9;
+      return immune_influence(0.85,0.1);
     }
   );
 
@@ -79,7 +97,7 @@ Population::Population(){
       return 0.04*(p->age/80)*(pow(p->bmi/25.,2));
     },
     [](Person* p){
-      return 0.8;
+      return immune_influence(0.92,0.01);
     }
   );
 
@@ -89,15 +107,9 @@ Population::Population(){
       return 0.01*(pow(p->age/70,3));
     },
     [](Person* p){
-      return 0.65;
+      return immune_influence(0.87,0.02);
     }
   );
-
-  //this->comorbidities["blood cancer"] = blood_cancer;
-  //this->comorbidities["respiratory cancer"] = resp_cancer;
-  //this->comorbidities["copd"] = copd;
-  //this->comorbidities["chd"] = chd;
-  //this->comorbidities["parkinsons"] = parkinsons;
 
 }
 
@@ -138,7 +150,7 @@ std::string Population::get_ethnicity(){
 
 double fn_igg_response(double x, double b, double c, double lambda)
 {
-  return b*pow(x,c)*exp(-1.0*lambda*x);
+  return b*pow(x,c)*(0.1 + exp(-1.0*lambda*x));
 }
 
 double lognormal(double x, double mean, double stddev)
@@ -162,13 +174,11 @@ void Person::create_infection_response(){
     double scale = vdisscale(gen);
     if(scale<0) scale=0;
     double width = vdiswidth(gen);
-
-
-   auto res = [start,mean,width,scale](int x){
-     double retval = scale*normal(x,start + mean, width);
-     return double(retval);
-   };
-   this->_virus_response.push_back(res);
+    auto res = [start,mean,width,scale](int x){
+       double retval = scale*normal(x,start + mean, width);
+       return double(retval);
+    };
+    this->_virus_response.push_back(res);
   }
 }
 
@@ -183,24 +193,45 @@ void Person::create_immune_response(){
   double width = 0.5;
   double s = 2;
 
+  bool use_product = false;
+  if(this->vaccine_dates.size() == this->vaccine_products.size()){
+    use_product = true;
+  }
+  else{
+    //std::cout << "No products specified!" << std::endl;
+  }
+
   for(auto start: this->vaccine_dates){
      nvaccine++;
 
-     double scale = 200*pow(nvaccine*pow(nvaccine + exp(-2*nvaccine),-1),3);
-     double lambda = 0.01;//*(pow(nvaccine,-0.5));
+     //double scale = 200*pow(nvaccine*pow(nvaccine + exp(-2*nvaccine),-1),3);
+     double scale = 200*pow(nvaccine,0.5);
+     double lambda = 0.02;//*(pow(nvaccine,-0.5));
      double rise = 0.4;
 
-     double m_age = pow((1+this->age)/50.,-0.3);//-0.5);
-     double m_bmi = pow((1+this->bmi)/30.,-0.1);//-0.7);
+     double m_age = pow((1+this->age)/50.,-0.1);//-0.5);
+     double m_bmi = pow((1+this->bmi)/30.,-0.05);//-0.7);
 
-     double m_c = m_age*m_bmi;
+     double m_c = m_age;//*m_bmi;
      for(auto c: this->comorbidities){
        m_c *= c.second->get_immune_influence(this);
      }
 
      scale *= m_c*pow(random_effect(gen),0.3);
-     //lambda *= pow(m_c,0.2)*pow(random_effect(gen),0.2);
-     //rise *= pow(m_c,0.3)*pow(random_effect(gen),0.3);
+     lambda *= pow(m_c,0.2)*pow(random_effect(gen),0.2);
+     rise *= pow(m_c,0.3)*pow(random_effect(gen),0.3);
+
+     //random effect
+     scale *= immune_influence(1,0.01);
+
+     //vaccine products
+     if(use_product){
+       int product = this->vaccine_products[nvaccine-1];
+       scale *= get_vaccine_product_influence(product);
+     }
+
+
+
 
      auto res = [start,scale,rise,lambda](int x){
          double _x = x-start;
@@ -275,8 +306,8 @@ double Person::get_hazard(int x){
   double v = this->get_infection_level(x);
 
   //double nrisks = this->comorbidities.size();
-
   double pbad = v*pow(p+1,-0.5);
+
   return (pbad);
 
 }
@@ -374,16 +405,41 @@ Person Population::test(){
   Person* p = this->generate();
 
   int days = int(0);
-  int nvaccines = 5;
+  int nvaccines = 3;
   for(int i=0; i<nvaccines; i++){
     //random not vaccinated with this dose
     if(dis(this->gen) < 0.1) break;
     days += int(vaccine_dis(this->gen));
+    if(i>1){
+      days += int(vaccine_dis(this->gen));
+    }
     p->vaccine_dates.push_back(days);
+  }
+
+  int i = 0;
+  while(i<350){
+    double pi = this->pandemic->get_p_infection(i);
+    if(dis(gen) < pi){
+      p->infection_dates.push_back(i);
+      i+=50;//dont get infected for another 50 days
+    }
+    i++;
   }
 
   p->create_immune_response();
   p->create_infection_response();
+
+  //simulate severe outcomes, on infection dates + 10 days
+  for(auto date: p->infection_dates){
+    for(int i = date;i<date+10;i++){
+      double h = p->get_hazard(i);
+      double rand = dis(this->gen);
+      if (rand < h){
+        p->outcome_dates.push_back(i);
+        break;
+      }
+    }
+  }
 
   return *p;
 }

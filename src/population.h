@@ -13,6 +13,7 @@
 class Person{
 public:
   int age;
+  int id;
   std::string sex;
   std::string ethnicity;
   int imd;
@@ -26,6 +27,7 @@ public:
     //outcome_dates.clear();
   }
   std::vector<int> vaccine_dates;
+  std::vector<int> vaccine_products;
   std::vector<int> infection_dates;
   std::vector<int> outcome_dates;
   int get_age() { return this->age;};
@@ -57,6 +59,7 @@ public:
   std::map<std::string,Comorbidity*> comorbidities;
   Pandemic* pandemic;
   void set_pandemic(Pandemic* p ){ this->pandemic = p;};
+  //void set_pandemic_(Pandemic p ){ std::cout << "ok ";};
   explicit Population();
   int get_age();
   int get_imd();
